@@ -13,9 +13,8 @@ return new class extends Migration
      */
     public function up()
     {
-        Schema::create('edetail', function (Blueprint $table) {
-            $table->id();
-            $table->timestamps();
+        Schema::table('students', function (Blueprint $table) {
+        $table->string('concatanate');
         });
     }
 
@@ -26,6 +25,8 @@ return new class extends Migration
      */
     public function down()
     {
-        Schema::dropIfExists('edetail');
+        Schema::table('students', function (Blueprint $table) {
+            $table->string('concatanate');
+        });
     }
 };
