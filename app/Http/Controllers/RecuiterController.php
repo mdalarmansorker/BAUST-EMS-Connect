@@ -2,102 +2,24 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Edetail;
 use App\Models\Login;
-use App\Models\Member;
 use App\Models\Student;
-use Illuminate\Contracts\Session\Session;
-use Illuminate\Contracts\View\View;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\DB;
 
-class LoginController extends Controller{
-    
-    //for login page view
-    public function index(){
-        return view('universal-login');
-    }
-    // Checking auth use
-    public function login(Request $request){
-        $request->validate([
-            'email' => 'required|email',
-            'password' => 'required|min:5',
-        ]);
-        $authUserInfo = Login::where('email',$request->email)->first();
-        if(!$authUserInfo && !Hash::check($request->password,$authUserInfo->password)){
-            return back()->with('loginfailed','Invalid credentials');
-        }
-        else{
-              $request->session()->put('loggedUserEmail',$authUserInfo->email);             
-            //  $userdata = ['userinfo'=>Login::where('email','=',session('loggedUserEmail'))->first()];
-                
-                
-            if($authUserInfo->user_type == 'public'){
-                return view('Public.publicpage');
-            }
-            else if($authUserInfo->user_type == 'register'){
-                // $getAllStudentdata = DB::table('students')->get()->all();
-                $countCurrentStudent = DB::table('students')->where('active',1)->count();
-                $countPassStudent = DB::table('students')->where('active',0)->count();
 
-                return view('Register.home',compact('countCurrentStudent','countPassStudent'));
-            } 
-            else if ($authUserInfo->user_type == 'recruiter') {
-                $getSessionUserEmail = Session('loggedUserEmail');
-                $send_data = DB::table('edetails')->select("*")->where('email', $getSessionUserEmail)->get();
-                $data = json_decode($send_data);
-                return view('Recruiter.recruiter-dashboard',compact('data'));
-            }
-
-        }
-    }
-    // Logout user
-    public function logout() {
-        if(session()->has('loggedUser')){
-            session()->pull('loggedUser');
-            return redirect('/');
-        }
-        else{
-            return redirect('/');
-        }
-    }
-
-    // for public page view
-
-    public function Public_page(){
-        return view('Public.publicpage');
-    }
-    public function Profile(Request $request){
-        $getSessionUserEmail = Session('loggedUserEmail');
-        $send_data = DB::table('edetails')->select("*")->where('email',$getSessionUserEmail)->get();
-        $data = json_decode($send_data);
-        return view('profile',compact('data'));
-    }
-    
-    public function add_student(){
-        return view('Recruiter.add-student');
-    }
-
-    public function update_Students_info(Request $request){
-        $data = DB::table('students')->get();
-        return view('Recruiter.update-students-info',compact('data'));
-    }
-    
-    public function update_Students_info_details($id){
-        $studentId = Student::find($id);
-        return view('Recruiter.update-students-info-details',compact('studentId'));
-    }
-
-    public function send_update_Students_info_details(Request $request,$id){
-        $recuit_student = Student::find($id);
+class RecuiterController extends Controller
+{
+   
+    public function send_add_student_data(Request $request)
+    {
         $request->validate([
             'email' => 'required|unique:students',
             'password' => 'required|min:5|max:8',
             's_phone' => 'required|max:11',
         ]);
-        // $recuit_student = new Student();
+        $recuit_student = new Student();
         $login = new Login();
         $recuit_student->name = $request->has('name') ? $request->get('name') :"";
         $dept = $request->has('dept') ? $request->get('dept') :"";
@@ -115,8 +37,8 @@ class LoginController extends Controller{
         {
             $year = $request->has('year') ? $request->get('year') :"";
             $semester = $request->has('semester') ? $request->get('semester') :"";
-            $get_id = DB::table('students')->select('*')->count()->where([['dept','=',$request->dept],['batch','=',intval($request->batch)]])->first();
-            $newid = $get_id[0][0]+1;
+            $get_id = DB::table('students')->where('dept','=',$request->dept)->where('batch','=',$request->batch)->count();
+            $newid = $get_id + 1;
 
             $dept_code = "01";
             if($dept == "CSE")
@@ -166,7 +88,7 @@ class LoginController extends Controller{
         $recuit_student->s_phone = $request->has('s_phone') ? $request->get('s_phone') :"";
         $recuit_student->permanent_address = $request->has('permanent_address') ? $request->get('permanent_address') :"";
         $recuit_student->present_address = $request->has('present_address') ? $request->get('present_address') :"";
-        // $recuit_student->email = $request->has('email') ? $request->get('email') :"";
+        $recuit_student->email = $request->has('email') ? $request->get('email') :"";
         $recuit_student->password = Hash::make($request->has('password') ? $request->get('password') : " ");       
         $recuit_student->user_type = "student";
         $recuit_student->active = $request->has('active') ? $request->get('active') :"";
@@ -175,13 +97,18 @@ class LoginController extends Controller{
         
 
         // Inserting into login tabe
-        // $login->email = $recuit_student->email;
+        $login->email = $recuit_student->email;
         $login->phone = $recuit_student->s_phone;
         $login->password = $recuit_student->password;
         $login->user_type = $recuit_student->user_type;
         $login->save();
-        return view('Recruiter.update-students-info-details');
+        return back()->with('success', 'Students added successfully and Student id is'.' '.$dept_id);
+        // function find_id(Request $request)
+        // {
+        // $get_id = DB::table('students')->select->count()->where('dept','=',$request->dept)->where('batch','=',$request->batch)->first();
+        // return $get_id[0][0]+1;
+        // }
     }
-
-
+    
 }
+?>
